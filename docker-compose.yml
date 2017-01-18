@@ -1,0 +1,41 @@
+version: "2"
+
+services:
+  cassandra:
+    image: cassandra:2.2.8
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+  kong:
+    image: kong
+    container_name: kong
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "7946:7946"
+      - "7946:7946/udp"
+    links:
+      - cassandra:cassandra
+      - api:api
+    environment:
+      - KONG_DATABASE=cassandra
+      - KONG_CASSANDRA_CONTACT_POINTS=cassandra
+    depends_on:
+      - cassandra
+    restart: always
+    command: ["/bin/bash", "-c", " while ! nc cassandra 9042; do sleep 5; done && kong start"]
+  ui:
+    image: pgbi/kong-dashboard
+    container_name: ui
+    ports:
+      - "8080:8080"
+    links:
+      - kong:kong
+    depends_on:
+      - kong
+  api:
+    build: ./api
+    container_name: api
+    ports:
+      - "3000:3000"
